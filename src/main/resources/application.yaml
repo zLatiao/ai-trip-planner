@@ -1,0 +1,34 @@
+server:
+  port: 9900
+
+spring:
+  application:
+    name: ai-trip-planner
+
+  # Spring AI 配置
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY}
+      read-timeout: 500
+      chat:
+        options:
+          model: qwen-plus-latest
+#    mcp:
+#      client:
+#        enabled: true
+#        name: mcp-client
+#        version: 1.0.0
+#        type: SYNC
+#        request-timeout: 60000
+#        stdio:
+#          # 这样要装npx
+#          servers-configuration: classpath:/mcp-servers-config.json
+
+# Spring AI 调试日志
+logging:
+  level:
+    org.springframework.ai: debug
+    io:
+      modelcontextprotocol:
+        client: DEBUG
+        spec: DEBUG

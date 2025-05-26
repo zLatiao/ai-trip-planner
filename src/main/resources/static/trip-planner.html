@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>旅游行程规划</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            max-width: 100%;
+            width: 100%;
+            margin: 0 auto;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 1.5rem;
+            padding-top: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 12px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .daily-plan {
+            margin-bottom: 20px;
+            padding: 12px;
+            border-left: 3px solid #007bff;
+            background-color: #fff;
+            border-radius: 4px;
+            cursor: move; /* 添加可拖拽光标 */
+        }
+
+        .weather-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding: 10px;
+            background-color: #f0f8ff;
+            border-radius: 6px;
+        }
+
+        .itinerary-item {
+            margin-top: 12px;
+            padding: 12px;
+            border-left: 2px solid #28a745;
+            background-color: #ffffff;
+            border-radius: 3px;
+            font-size: 0.95rem;
+            cursor: move; /* 添加可拖拽光标 */
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            margin-top: 15px;
+            padding: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            margin-top: 15px;
+            color: #666;
+            padding: 10px;
+        }
+
+        /* 针对小屏幕设备的额外优化 */
+        @media (min-width: 480px) {
+                .container {
+                    padding: 20px;
+                }
+
+                h1 {
+                    font-size: 1.8rem;
+                }
+
+                .btn {
+                    font-size: 1.1rem;
+                }
+            }
+
+        /* 滚动行为 */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* 拖拽时的样式 */
+        .dragging {
+            opacity: 0.5;
+            background-color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>旅游行程规划</h1>
+
+        <div class="input-group">
+            <input type="text" id="cityInput" placeholder="请输入城市名称">
+            <input type="number" id="daysInput" placeholder="请输入旅行天数">
+        </div>
+
+        <button class="btn" onclick="getTripPlan()">确认</button>
+
+        <div class="result" id="resultContainer"></div>
+    </div>
+
+    <script>
+        function getTripPlan() {
+            const place = document.getElementById('cityInput').value.trim();
+            const days = document.getElementById('daysInput').value.trim();
+            const resultContainer = document.getElementById('resultContainer');
+
+            // 输入验证
+            if (!place || !days) {
+                resultContainer.innerHTML = '<p class="error">请填写完整的信息</p>';
+                return;
+            }
+
+            // 显示加载状态
+            resultContainer.innerHTML = '<p class="loading">正在获取行程规划数据...</p>';
+
+            // 发送请求
+            fetch(`/api/ai-trip-plan/plan`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    place: place,
+                    days: parseInt(days)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0 && data.data.tripSummary) {
+                    // 成功获取数据，渲染结果
+                    resultContainer.innerHTML = '';
+                    renderTripResult(data.data);
+                    setupDragAndDrop(); // 在渲染完成后初始化拖拽功能
+                } else {
+                    // 错误处理
+                    resultContainer.innerHTML = `<p class="error">${data.msg || '获取行程规划失败'}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultContainer.innerHTML = '<p class="error">网络错误，请稍后再试</p>';
+            });
+        }
+
+        function renderTripResult(data) {
+            const resultContainer = document.getElementById('resultContainer');
+
+            // 创建概要信息
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'summary';
+            summaryDiv.innerHTML = `
+                    <h2 style="font-size: 1.2rem; margin-bottom: 10px;">行程概览：${data.tripSummary.place} (${data.tripSummary.durationDays}天)</h2>
+                    <p style="margin: 6px 0;">🌤️ 天气建议：${data.tripSummary.climateAdvice}</p>
+                `;
+            resultContainer.appendChild(summaryDiv);
+
+            // 创建每日计划
+            data.dailyPlans.forEach(dayPlan => {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'daily-plan';
+                dayDiv.setAttribute('draggable', 'true'); // 设置可拖拽属性
+
+                // 天气信息HTML
+                const weatherHtml = `
+                        <div class="weather-info">
+                            <span>☁️ 天气：${dayPlan.dailyWeather.condition}</span>
+                            <span>🌡️ 温度：${dayPlan.dailyWeather.temperatureRange}℃</span>
+                            <span>🌬️ 风力：${dayPlan.dailyWeather.wind}</span>
+                        </div>
+                    `;
+
+                // 活动安排HTML
+                let itineraryHtml = '';
+                if (dayPlan.itinerary && dayPlan.itinerary.length > 0) {
+                    itineraryHtml = dayPlan.itinerary.map(activity => `
+                        <div class="itinerary-item" draggable="true">
+                            <p>⏰ 时间：${activity.timeSlot}</p>
+                            <p>📍 景点：${activity.attraction.name}</p>
+                            <p>🚴 活动类型：${activity.activityType}</p>
+                            <p>🚌 交通：${activity.transportation.type}（${activity.transportation.detail}）</p>
+                            <p>📏 距离：${activity.routeInfo.distance}公里</p>
+                            <p>⚠️ 注意事项：${activity.specialTips}</p>
+                        </div>
+                    `).join('');
+                }
+
+                dayDiv.innerHTML = `
+                    <h3 style="font-size: 1.1rem; margin-top: 0; margin-bottom: 10px;">第${dayPlan.dayNumber}天</h3>
+                    ${weatherHtml}
+                    ${itineraryHtml}
+                `;
+
+                resultContainer.appendChild(dayDiv);
+            });
+
+            // 如果存在备选方案
+            if (data.emergencyPlan && data.emergencyPlan.rainyDayAlternatives && data.emergencyPlan.rainyDayAlternatives.length > 0) {
+                const emergencyDiv = document.createElement('div');
+                emergencyDiv.className = 'emergency-plan';
+                emergencyDiv.innerHTML = `
+                    <h3 style="font-size: 1.1rem; margin-top: 15px; margin-bottom: 10px;">🌧️ 雨天备选方案</h3>
+                    <ul style="padding-left: 20px; margin: 10px 0;">
+                        ${data.emergencyPlan.rainyDayAlternatives.map(item => `<li>${item.name}（${item.weatherProtection}）</li>`).join('')}
+                    </ul>
+                `;
+                resultContainer.appendChild(emergencyDiv);
+            }
+
+            // 添加导航工具部分
+            if (data.navigationTools) {
+                const navigationDiv = document.createElement('div');
+                navigationDiv.className = 'navigation-tools';
+                navigationDiv.innerHTML = `
+                    <h3 style="font-size: 1.1rem; margin-top: 15px; margin-bottom: 10px;">🗺️ 导航工具</h3>
+                    <p style="margin: 8px 0;">高德地图Schema链接：<br/><a href="${data.navigationTools.mapSchema}" target="_blank" style="color: #007bff; word-break: break-all;">打开地图</a></p>
+                    <p style="margin: 8px 0;">公共交通方案：${data.navigationTools.realTimeNavigation.publicTransport}</p>
+                `;
+                resultContainer.appendChild(navigationDiv);
+            }
+
+            // 初始化拖拽功能 - 单独处理动态生成的 .itinerary-item
+            document.querySelectorAll('.itinerary-item').forEach(draggable => {
+                draggable.addEventListener('dragstart', () => {
+                    draggable.classList.add('dragging');
+                });
+
+                draggable.addEventListener('dragend', () => {
+                    draggable.classList.remove('dragging');
+                });
+            });
+        }
+
+        function setupDragAndDrop() {
+            const draggables = document.querySelectorAll('.daily-plan');
+            const containers = document.querySelectorAll('.daily-plan'); // 修改为 .daily-plan 容器
+
+            draggables.forEach(draggable => {
+                draggable.addEventListener('dragstart', () => {
+                    draggable.classList.add('dragging');
+                });
+
+                draggable.addEventListener('dragend', () => {
+                    draggable.classList.remove('dragging');
+                });
+            });
+
+            containers.forEach(container => {
+                container.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    const afterElement = getDragAfterElement(container, e.clientY);
+                    const draggable = document.querySelector('.dragging');
+                    if (afterElement == null) {
+                        container.appendChild(draggable);
+                    } else {
+                        container.insertBefore(draggable, afterElement);
+                    }
+                });
+            });
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll(':scope > .itinerary-item:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && closest.offset === undefined || offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, null)?.element;
+        }
+    </script>
+</body>
+</html>
