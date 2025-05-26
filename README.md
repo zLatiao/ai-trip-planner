@@ -14,3 +14,7 @@
 
 1. 接入高德地图MCP，根据事实天气和路线来规划行程。
 2. 使用SSE一个地点一个地点生成给前端。
+
+## 运行效果图
+
+![](https://raw.githubusercontent.com/zLatiao/ai-trip-planner/refs/heads/main/img/%E8%BF%90%E8%A1%8C%E6%95%88%E6%9E%9C.jpeg)
