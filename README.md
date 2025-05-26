@@ -4,7 +4,7 @@
 
 ## 运行
 
-1. 先去阿里云百炼注册账号，弄个API KEY
+1. 先去阿里云百炼注册账号，弄个API KEY。https://bailian.console.aliyun.com/
 2. application.yaml中的DASHSCOPE_API_KEY替换成阿里云百炼平台的API KEY。或者在环境变量中设置DASHSCOPE_API_KEY。
 3. 运行项目
 4. 前往url: http://localhost:9900/trip-planner.html
